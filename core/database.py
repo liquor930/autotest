@@ -36,7 +36,9 @@ class DatabaseManager:
     def _get_conn(self) -> sqlite3.Connection:
         """获取当前线程的数据库连接"""
         if not hasattr(self._local, 'conn') or self._local.conn is None:
-            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+            # :memory: 不需要创建目录
+            if self.db_path != ':memory:':
+                os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             self._local.conn = sqlite3.connect(self.db_path)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
