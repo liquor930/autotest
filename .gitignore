@@ -7,29 +7,46 @@ dist/
 build/
 *.egg
 .eggs/
+*.whl
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.iml
+.gradle
+/local.properties
 
 # OS
 .DS_Store
 Thumbs.db
 
 # Test output
-test_output.txt
+tests/test_output.txt
 
-# Logs
+# Logs & Reports
 logs/
-*.log
-
-# Reports
-reports/
+reports/*.html
+reports/*.xlsx
 
 # Config
 config/*.yaml
 config/*.yml
 config/*.json
 !config/*.example.*
+
+# Android
+*.apk
+*.aab
+*.jks
+*.keystore
+*/.externalNativeBuild
+*/.cxx
+/captures
+
+# Legacy adb_control build artifacts
+adb_control/build/
+adb_control/dist/
+adb_control/*.egg-info/
+adb_control/__pycache__/
