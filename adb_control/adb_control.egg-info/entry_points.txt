@@ -1,0 +1,2 @@
+[console_scripts]
+bt-adb = adb_control.cli:app

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bluetooth Test</string>
+    <string name="app_description">Bluetooth automated testing application</string>
+
+    <!-- 权限说明 -->
+    <string name="permission_bluetooth_rationale">Bluetooth permission is required for device scanning, pairing, and communication.</string>
+    <string name="permission_location_rationale">Location permission is required for Bluetooth device discovery.</string>
+    <string name="permission_storage_rationale">Storage permission is required for saving HCI logs.</string>
+
+    <!-- 服务通知 -->
+    <string name="notification_bluetooth_service">Bluetooth Test Service is running</string>
+    <string name="notification_hci_log_service">HCI Log Service is running</string>
+
+    <!-- 状态信息 -->
+    <string name="status_bluetooth_enabled">Bluetooth is enabled</string>
+    <string name="status_bluetooth_disabled">Bluetooth is disabled</string>
+    <string name="status_scanning">Scanning for devices...</string>
+    <string name="status_scan_complete">Scan complete</string>
+    <string name="status_hci_enabled">HCI log enabled</string>
+    <string name="status_hci_disabled">HCI log disabled</string>
+    <string name="status_service_connected">Service connected</string>
+    <string name="status_service_disconnected">Service disconnected</string>
+
+    <!-- 错误信息 -->
+    <string name="error_no_bluetooth">Bluetooth is not supported on this device</string>
+    <string name="error_bluetooth_disabled">Please enable Bluetooth first</string>
+    <string name="error_permission_denied">Required permissions not granted</string>
+    <string name="error_device_not_found">Device not found</string>
+    <string name="error_not_connected">Device not connected</string>
+</resources>

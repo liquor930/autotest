@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 蓝牙图标 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30l-18,18 12,12-12,12 18,18 14,-14 -10,-10 10,-10zM50,50l4,4-4,4zM50,58l4,-4-4,-4z" />
+
+    <!-- 测试标记 -->
+    <path
+        android:fillColor="#FF4081"
+        android:pathData="M70,72l-5,-5 2,-2 5,5zM72,70l2,2-5,5-2,-2z" />
+</vector>
