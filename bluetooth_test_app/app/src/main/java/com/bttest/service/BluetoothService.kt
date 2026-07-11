@@ -66,6 +66,36 @@ class BluetoothService : Service() {
     private val gson = Gson()
 
     /** SPP UUID（标准串口协议） */
+    // === Fix 2: SPP data receive thread ===
+    private fun startSppReceiveThread(address: String, socket: BluetoothSocket) {
+        Thread({
+            try {
+                val input: InputStream = socket.inputStream
+                val buffer = ByteArray(4096)
+                val deviceAddress = address
+                while (socket.isConnected) {
+                    val bytes = input.read(buffer)
+                    if (bytes > 0) {
+                        val data = buffer.copyOf(bytes)
+                        val hex = data.joinToString(" ") { "%02x".format(it) }
+                        LogUtil.info("SPP data received from $deviceAddress: $hex")
+                        LogUtil.outputResult(
+                            CommandResult.success(
+                                "SPP data received ($bytes bytes) from $deviceAddress",
+                                data = hex,
+                                command = "RECEIVE_DATA"
+                            )
+                        )
+                    }
+                }
+            } catch (e: IOException) {
+                LogUtil.warn("SPP receive thread ended for $address: ${e.message}")
+            } catch (e: Exception) {
+                LogUtil.warn("SPP receive thread error for $address: ${e.message}")
+            }
+        }, "spp-recv-$address").apply { isDaemon = true; start() }
+    }
+
     companion object {
         val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
@@ -187,21 +217,19 @@ class BluetoothService : Service() {
             unregisterReceiver(discoveryReceiver)
             unregisterReceiver(bondStateReceiver)
             unregisterReceiver(connectionStateReceiver)
-        } catch (e: IllegalArgumentException) {
-            // 可能已经取消注册
-        }
+        } catch (e: IllegalArgumentException) { LogUtil.warn("Unregister receiver: ${e.message}") }
 
         // 停止扫描
         stopScan()
 
         // 关闭所有连接
         gattConnections.values.forEach { gatt ->
-            try { gatt.close() } catch (e: Exception) { /* ignore */ }
+            try { gatt.close() } catch (e: Exception) { LogUtil.warn("GATT close: ${e.message}") }
         }
         gattConnections.clear()
 
         socketConnections.values.forEach { socket ->
-            try { socket.close() } catch (e: Exception) { /* ignore */ }
+            try { socket.close() } catch (e: Exception) { LogUtil.warn("Socket close: ${e.message}") }
         }
         socketConnections.clear()
 
@@ -402,6 +430,10 @@ class BluetoothService : Service() {
             socket.connect()
             socketConnections[address] = socket
             LogUtil.info("Classic Bluetooth connected to $address")
+
+            // === Fix 2: Start SPP receive thread ===
+            startSppReceiveThread(address, socket)
+
             CommandResult.success("Connected to $address", command = "CONNECT")
         } catch (e: IOException) {
             CommandResult.failure("SPP connection failed: ${e.message}", command = "CONNECT")
@@ -672,6 +704,9 @@ class BluetoothService : Service() {
 
     // ==================== GATT 回调 ====================
 
+    /** CCCD UUID — 客户端特性配置描述符 */
+    private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             val deviceAddress = gatt.device.address
@@ -685,7 +720,7 @@ class BluetoothService : Service() {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 LogUtil.info("GATT disconnected from $deviceAddress")
                 gattConnections.remove(deviceAddress)
-                try { gatt.close() } catch (e: Exception) { /* ignore */ }
+                try { gatt.close() } catch (e: Exception) { LogUtil.warn("GATT close: ${e.message}") }
                 LogUtil.outputResult(
                     CommandResult.success("GATT disconnected: $deviceAddress", command = "DISCONNECT")
                 )
@@ -715,8 +750,41 @@ class BluetoothService : Service() {
                         command = "CONNECT"
                     )
                 )
+
+                // === Fix 1: Enable BLE notifications/indications ===
+                enableGattNotifications(gatt)
             } else {
                 LogUtil.warn("Service discovery failed for ${gatt.device.address}: status=$status")
+            }
+        }
+
+        /**
+         * 遍历服务中的 characteristic，对支持 NOTIFY/INDICATE 的注册通知
+         */
+        private fun enableGattNotifications(gatt: BluetoothGatt) {
+            try {
+                for (service in gatt.services) {
+                    for (characteristic in service.characteristics) {
+                        val properties = characteristic.properties
+                        val canNotify = (properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0
+                        val canIndicate = (properties and BluetoothGattCharacteristic.PROPERTY_INDICATE) > 0
+
+                        if (!canNotify && !canIndicate) continue
+
+                        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: continue
+                        descriptor.value = if (canIndicate)
+                            BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+                        else
+                            BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+
+                        gatt.setCharacteristicNotification(characteristic, true)
+                        gatt.writeDescriptor(descriptor)
+
+                        LogUtil.info("Notification enabled for ${characteristic.uuid} on ${gatt.device.address}")
+                    }
+                }
+            } catch (e: SecurityException) {
+                LogUtil.warn("Security exception enabling notifications: ${e.message}")
             }
         }
 

@@ -1,0 +1,10 @@
+APP Fixes Applied
+========================================
+  Fix 1: CCCD notification enable in onServicesDiscovered
+  Fix 2: SPP receive thread started
+  Fix 2: SPP receive thread method added
+  Fix 4: Added logging to broad catch blocks
+  Fix 3: Added Handler import
+  Fix 3: handleScan uses Handler instead of raw Thread
+
+Done.

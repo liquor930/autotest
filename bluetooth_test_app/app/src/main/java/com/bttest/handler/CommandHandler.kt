@@ -1,5 +1,8 @@
 package com.bttest.handler
 
+import android.os.Handler
+import android.os.Looper
+
 import android.content.Context
 import android.os.Bundle
 import com.bttest.model.CommandResult
@@ -148,12 +151,16 @@ class CommandHandler(private val context: Context) {
                     ?: return CommandResult.failure("BluetoothService not available", command = "SCAN")
                 val scanResult = result.startScan()
 
-                // 如果指定了扫描持续时间，自动在指定时间后停止扫描
+                // 如果指定了扫描持续时间，自动在指定时间后停止扫描 (Fix 3: 改用Handler)
                 if (scanResult.success && durationMs > 0) {
-                    Thread {
-                        Thread.sleep(durationMs.toLong())
-                        result.stopScan()
-                    }.start()
+                    val btService = result
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        try {
+                            btService.stopScan()
+                        } catch (e: Exception) {
+                            LogUtil.error("Auto stop scan failed", e)
+                        }
+                    }, durationMs.toLong())
                 }
 
                 scanResult
