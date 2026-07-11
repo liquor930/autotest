@@ -21,6 +21,7 @@ setup(
     entry_points={
         "console_scripts": [
             "bt-adb=cli.bt_adb.cli:app",
+            "bt-logger=cli.bt_logger.cli:app",
         ],
     },
 )
