@@ -1,2 +1,0 @@
-adb-shell>=0.4.3
-typer>=0.7.0
