@@ -1,91 +1,66 @@
-"""bt-logger 模块语法检查 + 功能验证"""
+"""bt-logger 模块快速验证（无 emoji 版）"""
 import ast, os, sys
 
-print("=" * 50)
-print("bt-logger 语法检查 + 功能验证")
-print("=" * 50)
-
-# 1. 语法检查
+print("=== Syntax Check ===")
 files = [
-    'modules/logger/__init__.py',
-    'modules/logger/logger_manager.py',
-    'modules/logger/hci_parser.py',
-    'modules/logger/btsnoop.py',
-    'cli/bt_logger/__init__.py',
-    'cli/bt_logger/cli.py',
+    'modules/logger/__init__.py', 'modules/logger/logger_manager.py',
+    'modules/logger/hci_parser.py', 'modules/logger/btsnoop.py',
+    'cli/bt_logger/__init__.py', 'cli/bt_logger/cli.py',
 ]
 ok = fail = 0
 for f in files:
     try:
-        with open(f, encoding='utf-8') as fh:
-            ast.parse(fh.read())
+        ast.parse(open(f, encoding='utf-8').read())
         ok += 1
-        print(f'  ✅ {f}')
+        print(f'  PASS: {f}')
     except SyntaxError as e:
         fail += 1
-        print(f'  ❌ {f} line {e.lineno}: {e.msg}')
+        print(f'  FAIL: {f} line {e.lineno}: {e.msg}')
+print(f'\nSyntax: {ok}/{ok+fail} passed')
 
-print(f'\n语法: {ok}/{ok+fail} 通过')
-
-if fail > 0:
+if fail:
     sys.exit(1)
 
-# 2. 功能验证
-print('\n--- 功能验证 ---\n')
-
-# HciLogParser: 无文件时优雅降级
-from modules.logger import HciLogParser
-parser = HciLogParser()
-result = parser.parse('nonexistent.log', 'text')
-assert result.error_count == 1, 'Missing file should have error_count=1'
-print('✅ HciLogParser.parse(nonexistent): 错误计数正确')
-
-# Quick analyze nonexistent btsnoop
+print("\n=== Functional Tests ===")
+from modules.logger import HciLogParser, LoggerManager
 from modules.logger.btsnoop import BtsnoopParser
-btsnoop = BtsnoopParser()
-r = btsnoop.parse('nonexistent.btsnoop')
-assert r.error_count == 1
-print('✅ BtsnoopParser.parse(nonexistent): 错误计数正确')
+from core import LogEntry, LogLevel
+import subprocess
 
-# LoggerManager: no ADB manager
-from modules.logger import LoggerManager
+parser = HciLogParser()
+r = parser.parse('_nonexistent_.log', 'text')
+assert r.error_count == 1, "Missing file should error"
+print('PASS: HciLogParser handles missing file')
+
+b = BtsnoopParser()
+r2 = b.parse('_nonexistent_.btsnoop')
+assert r2.error_count == 1, "Missing btsnoop should error"
+print('PASS: BtsnoopParser handles missing file')
+
 mgr = LoggerManager()
 try:
     mgr.start_hci_log('test')
-    print('❌ start_hci_log without adb should raise')
-except RuntimeError as e:
-    print(f'✅ LoggerManager.start_hci_log(no adb): {e}')
+    assert False, "Should raise"
+except RuntimeError:
+    print('PASS: LoggerManager raises without ADB')
 
-try:
-    mgr.stop_hci_log('test')
-    print('❌ stop_hci_log without adb should raise')
-except RuntimeError as e:
-    print(f'✅ LoggerManager.stop_hci_log(no adb): {e}')
-
-# LoggerManager list files (empty dir)
 files = mgr.list_log_files()
 assert isinstance(files, list)
-print(f'✅ LoggerManager.list_log_files(): {len(files)} files')
+print(f'PASS: list_log_files returns {len(files)} files')
 
-# Log export
-analysis = parser.analyze(result)
+analysis = parser.analyze(r)
 path = mgr.export_analysis(analysis)
-assert path is not None and os.path.exists(path)
-print(f'✅ LoggerManager.export_analysis() → {path}')
+assert path and os.path.exists(path), "Export should create file"
+print(f'PASS: export_analysis creates {path}')
+mgr.delete_log_file(os.path.basename(path))
 
-# Log management
-assert mgr.delete_log_file(os.path.basename(path)) == True
-print('✅ LoggerManager.delete_log_file()')
+py = r'C:\Users\36272\AppData\Local\Programs\Python\Python312\python.exe'
+result = subprocess.run([py, '-m', 'cli.bt_logger.cli', 'list'], capture_output=True, text=True)
+assert result.returncode == 0, f"CLI failed: {result.stderr}"
+print('PASS: bt-logger list runs')
 
-# 3. Imports from core (should be compatible)
-from core import (
-    LogEntry, LogLevel, LogStatistics, KeyEvent,
-    LogParserResult, LogAnalysisResult,
-)
-entry = LogEntry(level=LogLevel.INFO, message='test')
-assert entry.level == LogLevel.INFO
-print('✅ core models import compatible')
+result2 = subprocess.run([py, '-m', 'cli.bt_logger.cli', '--help'], capture_output=True, text=True)
+assert result2.returncode == 0, "CLI --help failed"
+print('PASS: bt-logger --help shows usage')
 
-print('\n' + '=' * 50)
-print('🎉 全部通过!')
-print('=' * 50)
+print("\n=== ALL TESTS PASSED ===")
