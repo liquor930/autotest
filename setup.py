@@ -22,6 +22,7 @@ setup(
         "console_scripts": [
             "bt-adb=cli.bt_adb.cli:app",
             "bt-logger=cli.bt_logger.cli:app",
+            "bt-test=cli.bt_test.cli:app",
         ],
     },
 )
